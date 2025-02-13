@@ -5,15 +5,19 @@
 #define SQUARE_SIZE 40
 #define WIDTH (1280 / SQUARE_SIZE)
 #define HEIGHT (720 / SQUARE_SIZE)
+#define n_count 8
 
 #define grid_at(grid, i, j) (grid)[(i)*WIDTH + (j)]
 
 static uint8_t grid[(WIDTH * HEIGHT)];
+ 
+
 typedef struct {
     int x;
     int y;
 } Pos;
 
+static Pos n_coords[n_count] = { {-1, -1}, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 } };
 typedef struct {
     Pos parent;
     Pos pos;
@@ -39,13 +43,9 @@ void pop(List *list, Pos parent, int f)
         Cell it = list->items[i];
         if (it.f == f && it.parent.x == parent.x && it.parent.y == parent.y)
         {
-            for (size_t j = i; j < list->len; j++)
-            {
-                list->items[j] = list->items[j+1]; 
-            }
+            for (size_t j = i; j < list->len; j++) list->items[j] = list->items[j+1]; 
             list->len--;
         }
-
     }
 }
 
@@ -56,7 +56,7 @@ int get_dist(Pos first, Pos second)
 
 bool invalid_pos(Pos pos)
 {
-    if (pos.x < 0 || pos.y < 0 || pos.x >= WIDTH || pos.y >= HEIGHT) return true;
+    if (pos.x < 0 || pos.y < 0 || pos.x >= HEIGHT || pos.y >= WIDTH || grid_at(grid, pos.x, pos.y) == 2) return true;
     return false;
 }
 
@@ -65,29 +65,35 @@ bool is_dest(Pos pos, Pos dest)
     return (pos.x == dest.x && pos.y == dest.y);
 }
 
-
-int main(void)
+void trace_route(List closed_list, Pos result[], Pos start)
 {
-    printf("Hello World\n");
-    grid_at(grid, 1, 2) = 10;
-    for (int i = 0; i < HEIGHT; i ++)
+    Cell curr_cell = closed_list.items[closed_list.len -1];
+
+    size_t count = 0;
+    result[count++] = curr_cell.pos; 
+    while (!is_dest(curr_cell.pos, start))
     {
-        for(int j = 0; j < WIDTH; j++)
+        for (size_t i = 0; i < closed_list.len; ++i)
         {
-            printf("%d ", grid[i*WIDTH+j]);
+            Cell it = closed_list.items[i];
+            if(is_dest(it.pos, curr_cell.parent)) 
+            {
+                result[count++] = it.pos;
+                grid_at(grid, curr_cell.pos.x, curr_cell.pos.y) = 1;
+                curr_cell = it;
+                break;
+            }
+            
         }
-        printf("\n");
     }
-   
-    const size_t n_count = 8;
-    Pos n_coords[n_count] = { {-1, -1}, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 } };
+}
 
-    Pos start_pos = {0};
-    Cell start_cell = { .parent = start_pos, .pos = start_pos };
-    Pos end_pos = { HEIGHT, WIDTH };
-
+void a_star(Pos start, Pos end)
+{
+    Cell start_cell = { .parent = start, .pos = start };
     List open_list = {0};
     List closed_list = {0};
+    Pos result[WIDTH*HEIGHT];
     
     append(&open_list, start_cell);
 
@@ -111,13 +117,13 @@ int main(void)
 
             if (invalid_pos(child.pos)) continue;
 
-            if (is_dest(child.pos, end_pos)) 
+            if (is_dest(child.pos, end)) 
             {
                 found_dest = true;
                 break;
             }
 
-            child.h = get_dist(child.pos, end_pos);
+            child.h = get_dist(child.pos, end);
             child.g = q.f;
             child.f = child.g + child.h;
 
@@ -145,18 +151,33 @@ int main(void)
             if (found) continue;
 
             append(&open_list, child);
-            printf("%d\n", open_list.len);
 
         }
         append(&closed_list, q);
-        
         if (found_dest) break;
     }
+    trace_route(closed_list, result, start);
+}
 
-    for (size_t i = 0; i < closed_list.len; ++i)
+
+int main(void)
+{
+    Pos start = {9, 28};
+    Pos end = {3, 0};
+    grid_at(grid, start.x, start.y) = 5;
+    grid_at(grid, end.x, end.y) = 4;
+    grid_at(grid, 8, 27) = 2;
+    grid_at(grid, 9, 27) = 2;
+    printf("%d %d\n", end.x, end.y);
+    a_star(start, end);
+    for (int i = 0; i < HEIGHT; i ++)
     {
-        printf("x: %d, y: %d\n ", closed_list.items[i].pos.x, closed_list.items[i].pos.y);
+        for(int j = 0; j < WIDTH; j++)
+        {
+            printf("%d ", grid[i*WIDTH+j]);
+        }
+        printf("\n");
     }
-
+    
     return 0;
 }
