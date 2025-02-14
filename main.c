@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <raylib.h>
 #include <stdint.h>
 
@@ -9,7 +10,8 @@
 #define SQUARE_SIZE 40
 #define WIDTH (1280 / SQUARE_SIZE)
 #define HEIGHT (720 / SQUARE_SIZE)
-#define n_count 8
+
+#define n_count 8 // don't change
 
 #define grid_at(grid, i, j) (grid)[(int)(i)*WIDTH + (int)(j)]
 
@@ -41,7 +43,11 @@ int append(List* list, Cell item)
     return list->len;
 }
 
-void draw_cell(int i, int j, Color color);
+void draw_cell(int i, int j, Color color)
+{
+    DrawRectangleV((Vector2) { j * SQUARE_SIZE, i * SQUARE_SIZE }, (Vector2) { SQUARE_SIZE, SQUARE_SIZE }, color);
+}
+
 
 void pop(List *list, Vector2 parent, int f)
 {
@@ -94,12 +100,6 @@ void trace_route(List closed_list, Vector2 result[], Vector2 start)
         }
     }
 }
-
-void draw_cell(int i, int j, Color color)
-{
-    DrawRectangleV((Vector2) { j * SQUARE_SIZE, i * SQUARE_SIZE }, (Vector2) { SQUARE_SIZE, SQUARE_SIZE }, color);
-}
-
 
 void draw_grid()
 {
@@ -163,6 +163,25 @@ int main(void)
             append(&open_list, start_cell);
             found_dest = false;
             for (size_t i = 0; i < WIDTH*HEIGHT; ++i) if (grid[i] == 1) grid[i] = 0;
+        }
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            Vector2 mouse_pos = GetMousePosition();
+            mouse_pos.x /= (float)SQUARE_SIZE;
+            mouse_pos.y /= (float)SQUARE_SIZE;
+
+            mouse_pos.x = floorf(mouse_pos.x);
+            mouse_pos.y = floorf(mouse_pos.y);
+
+            if (grid_at(grid, mouse_pos.y, mouse_pos.x) == 0) 
+            {
+                grid_at(grid, mouse_pos.y, mouse_pos.x) = 2;
+            }
+            else 
+            {
+                grid_at(grid, mouse_pos.y, mouse_pos.x) = 0;
+            }
         }
 
         BeginDrawing();
