@@ -177,7 +177,28 @@ void draw_cell(int i, int j, Color color)
 
 void draw_grid()
 {
+    for (size_t i = 0; i < HEIGHT; ++i)
+    {
+        for (size_t j = 0; j < WIDTH; ++j)
+        {
 
+            const Vector2 pos = { j*SQUARE_SIZE, i*SQUARE_SIZE };
+            const Vector2 size = { SQUARE_SIZE, SQUARE_SIZE };
+            const uint8_t val = grid_at(grid, i, j);
+            
+            switch(val)
+            {
+                case 0:
+                    break;
+                case 1:
+                    DrawRectangleV(pos, size, RED);
+                    break;
+                case 2:
+                    DrawRectangleV(pos, size, RAYWHITE);
+            }
+
+        }
+    }
     DrawLineV((Vector2){1, 0}, (Vector2){1, SCREEN_HEIGHT}, RAYWHITE);
     DrawLineV((Vector2){0, 1}, (Vector2){SCREEN_WIDTH, 0}, RAYWHITE);
     for (int i = SQUARE_SIZE; i <= SCREEN_WIDTH; i += SQUARE_SIZE)
@@ -189,25 +210,10 @@ void draw_grid()
     {
         DrawLineV((Vector2){0, i}, (Vector2){SCREEN_WIDTH, i}, RAYWHITE);
     }
-
 }
 
 void draw_solution(void)
 {
-    for (size_t i = 0; i < HEIGHT; ++i)
-    {
-        for (size_t j = 0; j < WIDTH; ++j)
-        {
-            if (grid_at(grid, i, j) == 1)
-            {
-                const Vector2 pos = { j*SQUARE_SIZE, i*SQUARE_SIZE };
-
-                const Vector2 size = { SQUARE_SIZE, SQUARE_SIZE };
-                DrawRectangleV(pos, size, RED);
-                 
-            }
-        }
-    }
 }
 
 int main(void)
@@ -226,7 +232,7 @@ int main(void)
             draw_cell(start.y, start.x, BLUE);
             if (!found_dest) a_star(start, end);
             draw_solution();
-            draw_cell(end.y, end.x, BLUE);
+            draw_cell(end.x, end.y, BLUE);
             draw_grid();
         EndDrawing();
     }
