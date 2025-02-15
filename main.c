@@ -10,19 +10,15 @@
 #define SQUARE_SIZE 40
 #define WIDTH (1280 / SQUARE_SIZE)
 #define HEIGHT (720 / SQUARE_SIZE)
-
-#define n_count 8 // don't change
-
 #define grid_at(grid, i, j) (grid)[(int)(i)*WIDTH + (int)(j)]
+
+#define draw_cell(i, j, color) DrawRectangleV((Vector2) { (int)(j) * SQUARE_SIZE, (int)(i) * SQUARE_SIZE }, (Vector2) { SQUARE_SIZE, SQUARE_SIZE }, (color))
 
 static uint8_t grid[(WIDTH * HEIGHT)];
 static bool found_dest = false;
+static bool started = false;
  
-//typedef struct {
-//    int x;
-//    int y;
-//} Pos;
-
+#define n_count 8 // don't change
 static Vector2 n_coords[n_count] = { {-1, -1}, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 } };
  
 typedef struct {
@@ -36,6 +32,7 @@ typedef struct {
     Cell items[WIDTH*HEIGHT];
 } List;
 
+// List ops
 int append(List* list, Cell item)
 {
     list->items[list->len] = item;
@@ -43,17 +40,11 @@ int append(List* list, Cell item)
     return list->len;
 }
 
-void draw_cell(int i, int j, Color color)
-{
-    DrawRectangleV((Vector2) { j * SQUARE_SIZE, i * SQUARE_SIZE }, (Vector2) { SQUARE_SIZE, SQUARE_SIZE }, color);
-}
-
-
 void pop(List *list, Vector2 parent, int f)
 {
     for(size_t i = 0; i < list->len; ++i)
     {
-        Cell it = list->items[i];
+        const Cell it = list->items[i];
         if (it.f == f && it.parent.x == parent.x && it.parent.y == parent.y)
         {
             for (size_t j = i; j < list->len; j++) list->items[j] = list->items[j+1]; 
@@ -88,7 +79,7 @@ void trace_route(List closed_list, Vector2 result[], Vector2 start)
     {
         for (size_t i = 0; i < closed_list.len; ++i)
         {
-            Cell it = closed_list.items[i];
+            const Cell it = closed_list.items[i];
             if(is_dest(it.pos, curr_cell.parent)) 
             {
                 result[count++] = it.pos;
@@ -107,24 +98,23 @@ void draw_grid()
     {
         for (size_t j = 0; j < WIDTH; ++j)
         {
-
-            const Vector2 pos = { j*SQUARE_SIZE, i*SQUARE_SIZE };
-            const Vector2 size = { SQUARE_SIZE, SQUARE_SIZE };
             const uint8_t val = grid_at(grid, i, j);
-            
             switch(val)
             {
                 case 0:
                     break;
                 case 1:
-                    DrawRectangleV(pos, size, RED);
+                    draw_cell(i, j, RED);
                     break;
                 case 2:
-                    DrawRectangleV(pos, size, RAYWHITE);
+                    draw_cell(i, j, RAYWHITE);
+                    break;
+                default:
+                    break;
             }
-
         }
     }
+
     DrawLineV((Vector2){1, 0}, (Vector2){1, SCREEN_HEIGHT}, RAYWHITE);
     DrawLineV((Vector2){0, 1}, (Vector2){SCREEN_WIDTH, 0}, RAYWHITE);
     for (int i = SQUARE_SIZE; i <= SCREEN_WIDTH; i += SQUARE_SIZE)
@@ -140,8 +130,6 @@ void draw_grid()
 
 int main(void)
 {
-    grid_at(grid, 1, 1) = 2;
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "A* Visualizer");
    
     const Vector2 start = { 5, 30};
     const Vector2 end = {16, 1};
@@ -153,9 +141,11 @@ int main(void)
     
     append(&open_list, start_cell);
 
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "A* Visualizer");
     SetTargetFPS(FPS);
     while(!WindowShouldClose())
     {
+        if (IsKeyPressed(KEY_ENTER)) started = !started;
         if (IsKeyPressed(KEY_R)) 
         {
             open_list.len = 0;
@@ -185,89 +175,82 @@ int main(void)
         }
 
         BeginDrawing();
-
-        ClearBackground(BLACK);            
-        if (!found_dest && open_list.len != 0)
-        {
-            Cell q = open_list.items[0];
-            for (size_t i = 1; i < open_list.len; ++i)
-            {   
-                Cell it = open_list.items[i]; 
-                if (it.f < q.f) q = it;    
-            }
-            pop(&open_list, q.parent, q.f);
-
-            for (size_t i = 0; i < n_count; ++i)
+            ClearBackground(BLACK);            
+            if (started)
             {
-                Cell child = { 
-                    .parent = q.pos,
-                    .pos = { .x = q.pos.x + n_coords[i].x, .y = q.pos.y + n_coords[i].y },
-                };
-
-                if (invalid_pos(child.pos)) continue;
-
-                if (is_dest(child.pos, end)) 
+                if (!found_dest && open_list.len != 0)
                 {
-                    found_dest = true;
-                    break;
-                }
+                    Cell q = open_list.items[0];
+                    for (size_t i = 1; i < open_list.len; ++i)
+                    {   
+                        const Cell it = open_list.items[i]; 
+                        if (it.f < q.f) q = it;    
+                    }
+                    pop(&open_list, q.parent, q.f);
 
-                child.h = get_dist(child.pos, end);
-                child.g = q.f;
-                child.f = child.g + child.h;
-
-                bool found = false; 
-                for (size_t j = 0; j < open_list.len; j++)
-                {
-                    Cell it = open_list.items[j];
-                    if (it.pos.x == child.pos.x && it.pos.y == child.pos.y && it.f < child.f)
+                    for (size_t i = 0; i < n_count; ++i)
                     {
-                        found = true;
-                        break;
+                        Cell child = { 
+                            .parent = q.pos,
+                            .pos = { .x = q.pos.x + n_coords[i].x, .y = q.pos.y + n_coords[i].y },
+                        };
+
+                        if (invalid_pos(child.pos)) continue;
+
+                        if (is_dest(child.pos, end)) 
+                        {
+                            found_dest = true;
+                            break;
+                        }
+
+                        child.h = get_dist(child.pos, end);
+                        child.g = q.f;
+                        child.f = child.g + child.h;
+
+                        bool found = false; 
+                        for (size_t j = 0; j < open_list.len; j++)
+                        {
+                            const Cell it = open_list.items[j];
+                            if (it.pos.x == child.pos.x && it.pos.y == child.pos.y && it.f < child.f)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        for (size_t j = 0; j < closed_list.len; j++)
+                        {
+                            const Cell it = closed_list.items[j];
+                            if (it.pos.x == child.pos.x && it.pos.y == child.pos.y && it.f < child.f)
+                            {
+                                found = true;
+                                break;
+                            }
+
+                        }
+                        if (found) continue;
+
+                        append(&open_list, child);
+
+                    }
+                    append(&closed_list, q);
+                    for (size_t i = 0; i < closed_list.len; ++i)
+                    {
+                        const Vector2 it = closed_list.items[i].pos;
+                        draw_cell(it.x, it.y, GREEN);
                     }
                 }
-
-                for (size_t j = 0; j < closed_list.len; j++)
+                else
                 {
-                    Cell it = closed_list.items[j];
-                    if (it.pos.x == child.pos.x && it.pos.y == child.pos.y && it.f < child.f)
-                    {
-                        found = true;
-                        break;
-                    }
-
+                    trace_route(closed_list, result, start);
                 }
-                if (found) continue;
-
-                append(&open_list, child);
-
             }
-            append(&closed_list, q);
-            for (size_t i = 0; i < closed_list.len; ++i)
-            {
-                const Vector2 it = closed_list.items[i].pos;
-                draw_cell(it.x, it.y, GREEN);
-            }
-        }
-        else
-        {
-            trace_route(closed_list, result, start);
-        }
 
-        draw_cell(start.x, start.y, BLUE);
-        draw_cell(end.x, end.y, BLUE);
-        draw_grid();
+            draw_cell(start.x, start.y, BLUE);
+            draw_cell(end.x, end.y, BLUE);
+            draw_grid();
         EndDrawing();
     }
     CloseWindow();
-
-    for (int i = 0; i < HEIGHT; i ++)
-    {
-        for(int j = 0; j < WIDTH; j++)
-        {
-            printf("%d ", grid[i*WIDTH+j]);
-        }
-        printf("\n");
-    }
     return 0;
 }
