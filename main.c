@@ -10,6 +10,7 @@
 #define SQUARE_SIZE 40
 #define WIDTH (1280 / SQUARE_SIZE)
 #define HEIGHT (720 / SQUARE_SIZE)
+
 #define grid_at(grid, i, j) (grid)[(int)(i)*WIDTH + (int)(j)]
 
 #define draw_cell(i, j, color) DrawRectangleV((Vector2) { (int)(j) * SQUARE_SIZE, (int)(i) * SQUARE_SIZE }, (Vector2) { SQUARE_SIZE, SQUARE_SIZE }, (color))
